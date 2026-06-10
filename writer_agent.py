@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from agents import Agent
 
-class BedTimeStory(BaseModel):
+class BedTimestory(BaseModel):
     title: str = Field(
         description="A magical, captivating title for the story"
     )
@@ -55,5 +55,5 @@ writer_agent = Agent(
     name="Bedtime Story Writer",
     instructions=INSTRUCTIONS,
     model="gpt-5-mini",
-    output_type=BedTimeStory
+    output_type=BedTimestory
 )

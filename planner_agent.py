@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from agents import Agent
 
 
-N_OF_SEARCHES = 6
+N_OF_SEARCHES = 3
 
 class StorySearchItem(BaseModel):
     query: str = Field(description="The search item to use for web search.")
