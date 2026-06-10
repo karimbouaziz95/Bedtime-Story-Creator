@@ -14,7 +14,7 @@ class UserInput(BaseModel):
     story_length: str = Field(
         description="The desired length of the story: short (5-7 min), medium (10-15 min), or long (20-30 min)."
     )
-    intrests: list[str] = Field(description="What the child is interested in")
+    interests: list[str] = Field(description="What the child is interested in")
     special_character: str | None = Field(
         description="Pet, friend, or toy to include in the story"
     )

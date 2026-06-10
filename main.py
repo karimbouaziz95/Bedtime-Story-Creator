@@ -20,7 +20,7 @@ async def generate_story(
         child_name=child_name,
         age=age,
         story_length=story_length,
-        intrests=interests,
+        interests=interests,
         special_character=special_character,
         moral_lesson=moral_lesson,
         topics_to_avoid=topics_to_avoid,
