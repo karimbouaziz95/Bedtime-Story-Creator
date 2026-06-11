@@ -5,6 +5,8 @@ import asyncio
 from planner_agent import planner_agent, StorySearchPlan, StorySearchItem
 from research_agent import research_agent
 from writer_agent import writer_agent, BedTimestory
+from guardian_agent import guardian_agent, StoryEvaluation
+
 
 class UserInput(BaseModel):
     child_name: str = Field(
@@ -34,6 +36,7 @@ class StoryResult(BaseModel):
 
 
 class StoryManager:
+    MAX_REVISIONS_ATTEMPTS = 3
 
     async def run(self, user_input: UserInput):
         """Run the story generation process, yielding status updates and the final story"""
@@ -52,12 +55,26 @@ class StoryManager:
             # Step 3: Write the story
             story = await self.write_story(user_input, search_results)
 
-            # Final result
-            print("Story creation completed.")
-            print(f"Title: {story.title}")
-            print(f"Story: {story.story}")
-            
+            # Step 4: Evaluate the story
+            evaluation = await self.evaluate_story(story, user_input)
 
+            attempts = 0
+            while not evaluation.is_approved and attempts < self.MAX_REVISIONS_ATTEMPTS:
+                attempts += 1
+                print(f"Revising Story - Attempt {attempts}/{self.MAX_REVISIONS_ATTEMPTS}")
+                story = await self.revise_story(story, user_input, evaluation)
+                evaluation = await self.evaluate_story(story, user_input)
+
+            # Final result
+            if evaluation.is_approved:
+                print("Final story approved!")
+                print(f"It took {attempts} revision attempts.")
+                print(f"Title: {story.title}")
+                print(f"Story: {story.story}")
+            else:
+                print("Failed to create an approved story after maximum revision attempts.")
+                print("Please try again with different parameters.")
+            
 
     async def plan_searches(self, user_input: UserInput) -> StorySearchPlan:
         """Create search queries based on user input."""
@@ -93,6 +110,7 @@ class StoryManager:
         except Exception as e:
             print(f"Error during search for query '{item.query}': {e}")
             return None
+        
 
     async def write_story(
             self,
@@ -106,4 +124,42 @@ class StoryManager:
              search results = {search_results}"
         result = await Runner.run(writer_agent, user_input_text)
         print("Story writing completed.")
+        return result.final_output_as(BedTimestory)
+    
+
+    async def evaluate_story(
+            self, story: BedTimestory, user_input: UserInput
+    ) -> StoryEvaluation:
+        """Evaluate the story for quality, safety and appropriateness"""
+        print("Evaluating story...")
+        user_input_text = f"Evaluate this story based on these parameters:\
+             story = {story}, \
+             user's input = {user_input}"
+        result = await Runner.run(guardian_agent, user_input_text)
+        evaluation = result.final_output_as(StoryEvaluation)
+        print("Story evaluation completed.")
+        print(
+            f"Evaluation: {'APPROVED' if evaluation.is_approved else 'REJECTED'}"
+        )
+        return evaluation
+    
+    async def revise_story(
+            self,
+            story: BedTimestory,
+            evaluation: StoryEvaluation,
+            user_input: UserInput,
+            research_results: list[str]
+    ) -> BedTimestory:
+        """Revise the story based on the guardian's feedback"""
+        print("Revising story...")
+        user_input_text = f"Revise this bedtime story based on the following parameters:\
+            user's input = {user_input}, \
+            search results = {research_results}, \
+            previous_story = {story}, \
+            issues_to_fix = {evaluation.issues_found}\
+            fix_instructions = {evaluation.fix_instructions}"
+        
+        result = await Runner.run(writer_agent, user_input_text)
+        print("Story revision completed.")
+
         return result.final_output_as(BedTimestory)
