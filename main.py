@@ -13,25 +13,39 @@ async def generate_story(
     interests: list[str],
     special_character: str,
     moral_lesson: str,
-    topics_to_avoid: list[str],
+    topics_to_avoid: str,
     include_fun_fact: bool,
     story_language: str,
 ):
+    if not child_name:
+        yield "Please enter the child's name!", ""
+        return
+
+    if not interests:
+        yield "Please select at least one interest!", ""
+        return
+    
     user_input = UserInput(
         child_name=child_name,
         age=age,
         story_length=story_length,
         interests=interests,
-        special_character=special_character,
+        special_character=special_character if special_character else None,
         moral_lesson=moral_lesson,
-        topics_to_avoid=topics_to_avoid,
+        topics_to_avoid=topics_to_avoid if topics_to_avoid else None,
         include_fun_fact=include_fun_fact,
         story_language=story_language,
     )
-    await StoryManager().run(user_input)
+
+    async for chunk in StoryManager().run(user_input):
+        # Check if this is the final story (starts with #)
+        if chunk.startswith("# ") or chunk.startswith("---"):
+            yield "", chunk  # Clear status, show story
+        else:
+            yield chunk, ""  # Show status, clear story
 
 with gr.Blocks(
-    #theme= gr.themes.Soft(primary_hue="blue", secondary_hue="blue"),
+    theme= gr.themes.Soft(primary_hue="blue", secondary_hue="pink"),
     title="Bedtime Story Creator"
 ) as ui:
     gr.Markdown("# 🌙 Bedtime Stories Creator")
@@ -200,22 +214,22 @@ with gr.Blocks(
 
         gr.Markdown("🛡️ *Stories reviewed for child safety. AI can make mistakes.*")
 
-async def main():
-
-
-        
-    await generate_story(
-        child_name="Alice",
-        age=6,
-        story_length="short",
-        interests=["dragons", "magic"],
-        special_character="teddy bear",
-        moral_lesson="friendship",
-        topics_to_avoid=["scary monsters"],
-        include_fun_fact=True,
-        story_language="English",
-    )
-
+        # Wire up the button
+        generate_btn.click(
+            fn=generate_story,
+            inputs=[
+                child_name,
+                age,
+                story_length,
+                interests,
+                special_character,
+                moral_lesson,
+                topics_to_avoid,
+                include_fun_fact,
+                story_language,
+            ],
+            outputs=[status_output, story_output],
+        )
 
 if __name__ == "__main__":
     ui.launch(inbrowser=True)

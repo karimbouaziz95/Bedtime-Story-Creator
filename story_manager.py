@@ -21,7 +21,7 @@ class UserInput(BaseModel):
         description="Pet, friend, or toy to include in the story"
     )
     moral_lesson: str = Field(description="The life lesson to weave into the story")
-    topics_to_avoid: list[str] | None = Field(
+    topics_to_avoid: str | None = Field(
         description="Topics to avoid in the story"
     )
     include_fun_fact: bool = Field(
@@ -45,17 +45,26 @@ class StoryManager:
             print(
                 f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}"
             )
+            yield f"🔗 [View trace](https://platform.openai.com/traces/trace?trace_id={trace_id})"
+
 
             # Step 1: Plan searches
+            yield "🎨 Planning your magical story..."
             search_plan = await self.plan_searches(user_input)
+            yield f"📋 Theme: {search_plan.story_theme}"
 
             # Step 2: Perform searches
-            search_results = await self.perform_searches(search_plan)
+            yield "🔍 Researching inspiration..."
+            research_results = await self.perform_searches(search_plan)
+            yield f"✨ Found {len(research_results)} sources of inspiration"
 
             # Step 3: Write the story
-            story = await self.write_story(user_input, search_results)
+            yield "✍️ Writing your bedtime story..."
+            story = await self.write_story(user_input, research_results)
+            yield f'📖 Draft complete: "{story.title}"'
 
             # Step 4: Evaluate the story
+            yield "🛡️ Guardian is checking the story..."
             evaluation = await self.evaluate_story(story, user_input)
 
             attempts = 0
@@ -67,13 +76,16 @@ class StoryManager:
 
             # Final result
             if evaluation.is_approved:
-                print("Final story approved!")
-                print(f"It took {attempts} revision attempts.")
-                print(f"Title: {story.title}")
-                print(f"Story: {story.story}")
+                yield "✅ Story approved by Guardian!"
+                yield f"⏱️ Reading time: ~{story.reading_time_in_minutes} minutes"
+                yield f"💝 Moral: {story.moral_lesson}"
+                if story.fun_fact_included:
+                    yield f"🧠 Fun fact: {story.fun_fact_included}"
+                yield "---"
+                yield f"# {story.title}\n\n{story.story}"
             else:
-                print("Failed to create an approved story after maximum revision attempts.")
-                print("Please try again with different parameters.")
+                yield "❌ Could not create a safe story after multiple attempts."
+                yield "Please try different inputs or avoid certain topics."
             
 
     async def plan_searches(self, user_input: UserInput) -> StorySearchPlan:
